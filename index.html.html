@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MatteMästaren: Äventyret genom 100 Nivåer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fredoka & Inter för modern och lekfull spelkänsla -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    h1, h2, h3, .font-heading {
+      font-family: 'Fredoka', cursive;
+    }
+    /* 3D-knappeffekt à la populära mobilspel */
+    .btn-3d {
+      transition: all 0.08s ease-in-out;
+      position: relative;
+    }
+    .btn-3d:active:not(:disabled) {
+      transform: translateY(4px);
+    }
+    .btn-amber {
+      background-color: #f59e0b;
+      box-shadow: 0 5px 0 #b45309;
+    }
+    .btn-amber:active:not(:disabled) {
+      box-shadow: 0 1px 0 #b45309;
+    }
+    .btn-indigo {
+      background-color: #6366f1;
+      box-shadow: 0 5px 0 #4338ca;
+    }
+    .btn-indigo:active:not(:disabled) {
+      box-shadow: 0 1px 0 #4338ca;
+    }
+    .btn-emerald {
+      background-color: #10b981;
+      box-shadow: 0 5px 0 #047857;
+    }
+    .btn-emerald:active:not(:disabled) {
+      box-shadow: 0 1px 0 #047857;
+    }
+    .btn-rose {
+      background-color: #f43f5e;
+      box-shadow: 0 5px 0 #be123c;
+    }
+    .btn-rose:active:not(:disabled) {
+      box-shadow: 0 1px 0 #be123c;
+    }
+    /* Pulsande animationer */
+    @keyframes bounceSmall {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .animate-bounce-gentle {
+      animation: bounceSmall 2s infinite ease-in-out;
+    }
+    /* Anpassad scrollbar för nivåkartan */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
+
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-2">
+      <!-- Vänster: Logotyp / Hem-länk -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="game.showScreen('map')">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center shadow-lg shadow-amber-500/30 text-slate-950 text-xl font-bold">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div>
+          <div class="font-heading font-bold text-lg md:text-xl tracking-wide leading-tight bg-gradient-to-r from-yellow-300 via-amber-200 to-emerald-400 bg-clip-text text-transparent">
+            MatteMästaren
+          </div>
+          <span class="text-xs text-slate-400 font-semibold tracking-wider uppercase">100 Nivåer</span>
+        </div>
+      </div>
+
+      <!-- Höger: Mynt, Kladdblock-toggle, Ljud & Butik-knapp -->
+      <div class="flex items-center gap-2 md:gap-3">
+        <!-- Myntindikator med animation -->
+        <div class="flex items-center gap-2 bg-slate-800/90 border border-amber-500/40 px-3 py-1.5 rounded-full shadow-inner">
+          <i class="fa-solid fa-coins text-amber-400 text-lg animate-pulse"></i>
+          <span id="hud-coins" class="font-heading font-bold text-amber-300 text-base md:text-lg">0</span>
+        </div>
+
+        <!-- Kladdblock-knapp (Ritplatta) -->
+        <button id="btn-toggle-scratch" onclick="scratchpad.toggle()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-indigo-300 border border-indigo-500/40 px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold transition" title="Öppna Kladdblock">
+          <i class="fa-solid fa-pencil"></i>
+          <span class="hidden sm:inline">Kladda</span>
+        </button>
+
+        <!-- Butiksknapp -->
+        <button onclick="game.showScreen('shop')" class="btn-3d btn-amber text-slate-950 font-bold px-3 py-1.5 rounded-full text-xs md:text-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-shop"></i>
+          <span class="hidden sm:inline">Butik</span>
+        </button>
+
+        <!-- Ljud av/på -->
+        <button id="btn-sound-toggle" onclick="audioEngine.toggleSound()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center border border-slate-700 transition" title="Ljud av/på">
+          <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-6xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col justify-center">
+
+    <!-- ==================== SKÄRM 1: KARTA / NIVÅVÄLJARE ==================== -->
+    <section id="screen-map" class="space-y-6">
+      <!-- Välkomstbanner & Spelarstatistik -->
+      <div class="bg-gradient-to-r from-indigo-900/60 via-purple-900/40 to-slate-900/80 border border-indigo-500/30 rounded-3xl p-5 md:p-7 shadow-2xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30 mb-2">
+              Mellanstadiets Matte-Äventyr (10–12 år)
+            </span>
+            <h1 class="font-heading text-2xl md:text-4xl font-extrabold text-white">
+              Välj Din Utmaning! 🚀
+            </h1>
+            <p class="text-slate-300 text-sm md:text-base mt-1 max-w-xl">
+              Klättra genom alla 100 nivåer, samla stjärnor, tjäna guldmynt och använd smarta livlinor för att bli en sann Mattemästare.
+            </p>
+          </div>
+
+          <!-- Totala stjärnor & Slutfört -->
+          <div class="flex items-center gap-3 bg-slate-900/80 border border-slate-700 px-4 py-3 rounded-2xl">
+            <div class="text-center px-2">
+              <div class="text-xs text-slate-400 font-semibold uppercase">Stjärnor</div>
+              <div class="font-heading text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-1 justify-center">
+                <i class="fa-solid fa-star"></i>
+                <span id="map-total-stars">0</span><span class="text-xs text-slate-500">/300</span>
+              </div>
+            </div>
+            <div class="h-8 w-px bg-slate-700"></div>
+            <div class="text-center px-2">
+              <div class="text-xs text-slate-400 font-semibold uppercase">Framsteg</div>
+              <div class="font-heading text-xl md:text-2xl font-bold text-emerald-400" id="map-progress-percent">
+                1%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zon-väljarflikar (De 5 Världarna) -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none" id="zone-tabs">
+        <!-- Renderas dynamiskt i JS -->
+      </div>
+
+      <!-- Nivågrid för vald Zon (20 nivåer per zon) -->
+      <div class="bg-slate-900/50 border border-slate-800 rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-5">
+          <div>
+            <h2 id="current-zone-title" class="font-heading text-xl md:text-2xl font-bold text-white flex items-center gap-2">
+              <!-- Fylls i med zonnamn -->
+            </h2>
+            <p id="current-zone-desc" class="text-xs sm:text-sm text-slate-400">
+              <!-- Fylls i med zonbeskrivning -->
+            </p>
+          </div>
+          <div class="text-xs font-semibold text-slate-400">
+            Nivå <span id="current-zone-range" class="text-amber-400 font-bold">1–20</span>
+          </div>
+        </div>
+
+        <!-- Själva rutnätet med nivåbrickor -->
+        <div id="levels-grid" class="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-10 gap-2.5 sm:gap-3">
+          <!-- Renderas dynamiskt via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SKÄRM 2: SPELOMRÅDE (AKTIV NIVÅ) ==================== -->
+    <section id="screen-game" class="hidden space-y-4 max-w-3xl mx-auto w-full">
+      
+      <!-- Spel-HUD: Nivå, Progress & Livlinor -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-xl">
+        <div class="flex items-center justify-between">
+          <button onclick="game.confirmExitLevel()" class="text-slate-400 hover:text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-slate-800 transition">
+            <i class="fa-solid fa-arrow-left"></i> Avbryt
+          </button>
+          
+          <div class="text-center">
+            <span id="game-zone-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Zon 1
+            </span>
+            <h3 id="game-level-number" class="font-heading text-lg sm:text-xl font-bold text-white mt-0.5">
+              Nivå 1
+            </h3>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Streak mätare -->
+            <div id="streak-badge" class="hidden sm:flex items-center gap-1 bg-amber-500/20 border border-amber-500/40 px-2 py-1 rounded-full text-xs font-bold text-amber-300">
+              <i class="fa-solid fa-fire text-amber-400"></i>
+              <span id="game-streak-count">0</span>x
+            </div>
+            <!-- Timer bar toggle / display -->
+            <div class="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-full text-xs font-mono font-bold text-slate-300">
+              <i class="fa-regular fa-clock text-indigo-400"></i>
+              <span id="game-timer-display">45s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fråge-framstegsindikator (10 steg) -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] font-semibold text-slate-400">
+            <span>Fråga <span id="game-question-index" class="text-white font-bold">1</span> av 10</span>
+            <span>Rätt svar: <span id="game-correct-count" class="text-emerald-400 font-bold">0</span>/10</span>
+          </div>
+          <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden flex p-0.5">
+            <div id="game-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-300" style="width: 10%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Livlinor HUD (Snabbknappar mitt under spelet) -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 overflow-x-auto">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 hidden sm:inline ml-1">
+          Livlinor:
+        </span>
+        <div class="flex items-center justify-around w-full sm:w-auto gap-2">
+          <!-- 50/50 -->
+          <button id="btn-lifeline-5050" onclick="game.useLifeline('fiftyFifty')" class="group relative flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 transition">
+            <span class="text-amber-400 text-sm"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+            <span class="text-xs font-bold">50/50</span>
+            <span id="badge-count-5050" class="ml-1 bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded-md text-[10px] font-bold border border-amber-500/40">0</span>
+          </button>
+
+          <!-- Tidsfrys (+30s) -->
+          <button id="btn-lifeline-time" onclick="game.useLifeline('freezeTime')" class="group relative flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 transition">
+            <span class="text-cyan-400 text-sm"><i class="fa-solid fa-snowflake"></i></span>
+            <span class="text-xs font-bold">+30s</span>
+            <span id="badge-count-time" class="ml-1 bg-cyan-500/20 text-cyan-300 px-1.5 py-0.2 rounded-md text-[10px] font-bold border border-cyan-500/40">0</span>
+          </button>
+
+          <!-- Ledtråd -->
+          <button id="btn-lifeline-hint" onclick="game.useLifeline('hint')" class="group relative flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 transition">
+            <span class="text-yellow-400 text-sm"><i class="fa-regular fa-lightbulb"></i></span>
+            <span class="text-xs font-bold">Ledtråd</span>
+            <span id="badge-count-hint" class="ml-1 bg-yellow-500/20 text-yellow-300 px-1.5 py-0.2 rounded-md text-[10px] font-bold border border-yellow-500/40">0</span>
+          </button>
+
+          <!-- Superhopp (Hoppa över & räkna som rätt) -->
+          <button id="btn-lifeline-skip" onclick="game.useLifeline('skip')" class="group relative flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 transition">
+            <span class="text-purple-400 text-sm"><i class="fa-solid fa-forward-step"></i></span>
+            <span class="text-xs font-bold">Hoppa</span>
+            <span id="badge-count-skip" class="ml-1 bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded-md text-[10px] font-bold border border-purple-500/40">0</span>
+          </button>
+
+          <!-- Snabbköp i HUD -->
+          <button onclick="game.showScreen('shop')" class="text-xs text-amber-400 hover:underline font-semibold ml-1 p-1" title="Köp fler i butiken">
+            + Köp
+          </button>
+        </div>
+      </div>
+
+      <!-- HUVUDKORT: Fråga & Matematisk uppgift -->
+      <div class="bg-gradient-to-b from-slate-900 to-slate-900/90 border border-slate-700/80 rounded-3xl p-5 sm:p-8 shadow-2xl relative">
+        
+        <!-- Ledtrådsruta om spelaren aktiverat ledtråd -->
+        <div id="hint-display-box" class="hidden mb-4 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-200 text-sm flex items-start gap-2.5 animate-fadeIn">
+          <i class="fa-solid fa-lightbulb text-amber-400 text-base mt-0.5"></i>
+          <div>
+            <span class="font-bold block text-xs uppercase tracking-wider text-amber-400">Pedagogisk Ledtråd:</span>
+            <span id="hint-text">Tänk på att multiplicera först innan du adderar!</span>
+          </div>
+        </div>
+
+        <!-- Matematisk visualisering (Visar bråk, figurer eller diagram om aktuellt) -->
+        <div id="math-visual-container" class="hidden mb-4 flex justify-center items-center p-3 bg-slate-950/60 rounded-2xl border border-slate-800">
+          <!-- Canvas eller SVG ritas in här -->
+        </div>
+
+        <!-- Själva Frågetexten -->
+        <div class="text-center my-3 sm:my-5">
+          <div id="question-category-tag" class="text-xs uppercase font-extrabold tracking-widest text-indigo-400 mb-2">
+            Huvudräkning
+          </div>
+          <h2 id="question-prompt" class="font-heading text-2xl sm:text-3xl md:text-4xl font-extrabold text-white leading-snug">
+            Vad är 340 + 280?
+          </h2>
+        </div>
+
+        <!-- De 4 Svarsalternativen -->
+        <div id="options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-6">
+          <!-- Alternativ renderas dynamiskt -->
+        </div>
+      </div>
+
+      <!-- Förklaringspanel (visas efter svar) -->
+      <div id="feedback-panel" class="hidden p-4 sm:p-5 rounded-2xl border transition-all duration-300">
+        <div class="flex items-start gap-3">
+          <div id="feedback-icon" class="text-2xl mt-1"></div>
+          <div class="flex-grow">
+            <h4 id="feedback-title" class="font-heading text-lg font-bold"></h4>
+            <p id="feedback-explanation" class="text-sm mt-1 text-slate-200"></p>
+          </div>
+          <button id="btn-next-question" onclick="game.nextQuestion()" class="btn-3d btn-emerald text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm whitespace-nowrap self-center">
+            Nästa <i class="fa-solid fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SKÄRM 3: NIVÅRESULTAT (SEGER / FÖRSÖK IGEN) ==================== -->
+    <section id="screen-result" class="hidden max-w-lg mx-auto w-full text-center space-y-6">
+      <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        
+        <!-- Konfettikanvas för segerfirande -->
+        <canvas id="victory-confetti" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+        <div class="relative z-10 space-y-5">
+          <!-- Header & Ikon -->
+          <div id="result-trophy-container" class="w-20 h-20 mx-auto rounded-3xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-4xl shadow-lg shadow-amber-500/20 animate-bounce-gentle">
+            <i class="fa-solid fa-trophy"></i>
+          </div>
+
+          <div>
+            <h2 id="result-title" class="font-heading text-2xl sm:text-3xl font-extrabold text-white">
+              Nivå Avklarad!
+            </h2>
+            <p id="result-subtitle" class="text-sm text-slate-300 mt-1">
+              Grymt jobbat! Du behärskar matematiken som ett riktigt proffs.
+            </p>
+          </div>
+
+          <!-- Stjärnor som tänds -->
+          <div id="result-stars" class="flex justify-center items-center gap-3 text-3xl sm:text-4xl text-slate-700 my-2">
+            <i class="fa-solid fa-star star-1 transition-all duration-300"></i>
+            <i class="fa-solid fa-star star-2 transition-all duration-300"></i>
+            <i class="fa-solid fa-star star-3 transition-all duration-300"></i>
+          </div>
+
+          <!-- Statistikbox (Poäng & Mynt) -->
+          <div class="grid grid-cols-2 gap-3 bg-slate-950/70 border border-slate-800 p-3.5 rounded-2xl">
+            <div>
+              <div class="text-xs uppercase font-semibold text-slate-400">Rätta Svar</div>
+              <div id="result-score" class="font-heading text-xl font-bold text-emerald-400 mt-0.5">
+                9 / 10
+              </div>
+            </div>
+            <div>
+              <div class="text-xs uppercase font-semibold text-slate-400">Intjänade Mynt</div>
+              <div id="result-coins-earned" class="font-heading text-xl font-bold text-amber-400 mt-0.5 flex items-center justify-center gap-1">
+                <i class="fa-solid fa-coins"></i> +85
+              </div>
+            </div>
+          </div>
+
+          <!-- Handlingsknappar -->
+          <div class="flex flex-col sm:flex-row gap-3 pt-2">
+            <button onclick="game.showScreen('map')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 rounded-2xl text-sm transition">
+              <i class="fa-solid fa-map mr-1.5"></i> Till Kartan
+            </button>
+            <button id="btn-result-action" onclick="game.nextLevelOrRetry()" class="w-full btn-3d btn-emerald text-slate-950 font-extrabold py-3 rounded-2xl text-sm">
+              Nästa Nivå <i class="fa-solid fa-forward ml-1"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SKÄRM 4: MATTE-BUTIKEN (LIVLINOR) ==================== -->
+    <section id="screen-shop" class="hidden space-y-6 max-w-4xl mx-auto w-full">
+      <div class="flex items-center justify-between">
+        <div>
+          <button onclick="game.showScreen('map')" class="text-slate-400 hover:text-white text-sm font-semibold flex items-center gap-1.5 mb-2">
+            <i class="fa-solid fa-arrow-left"></i> Tillbaka till Kartan
+          </button>
+          <h2 class="font-heading text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
+            Mästarens Magiska Butik 🛍️
+          </h2>
+          <p class="text-sm text-slate-300">
+            Använd dina intjänade guldmynt för att köpa användbara livlinor till kluriga nivåer!
+          </p>
+        </div>
+
+        <div class="bg-slate-900 border border-amber-500/40 px-4 py-2 rounded-2xl flex items-center gap-2">
+          <i class="fa-solid fa-coins text-amber-400 text-xl"></i>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-bold">Ditt Saldo</div>
+            <div id="shop-coins-balance" class="font-heading font-extrabold text-amber-300 text-lg">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Varukort i butiken -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="shop-items-grid">
+        <!-- Renderas dynamiskt i JS -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== INTERAKTIVT KLADDBLOCK / RITPLATTA ==================== -->
+  <div id="scratchpad-overlay" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex flex-col justify-end sm:justify-center p-2 sm:p-6 animate-fadeIn">
+    <div class="bg-slate-900 border border-slate-700 max-w-3xl w-full mx-auto rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh] sm:h-[75vh]">
+      
+      <!-- Ritplatta Verktygsfält -->
+      <div class="bg-slate-800/90 px-4 py-2.5 flex items-center justify-between border-b border-slate-700">
+        <div class="flex items-center gap-2">
+          <span class="font-heading font-bold text-white text-base flex items-center gap-2">
+            <i class="fa-solid fa-pencil text-indigo-400"></i> Kladdblock
+          </span>
+          <span class="text-xs text-slate-400 hidden sm:inline">Räkna och rita fritt med musen eller fingret</span>
+        </div>
+
+        <!-- Färger, sudd & rensa -->
+        <div class="flex items-center gap-2">
+          <button onclick="scratchpad.setColor('#ffffff')" class="w-6 h-6 rounded-full bg-white border-2 border-slate-400 hover:scale-110 transition" title="Vit penna"></button>
+          <button onclick="scratchpad.setColor('#facc15')" class="w-6 h-6 rounded-full bg-yellow-400 border border-slate-400 hover:scale-110 transition" title="Gul penna"></button>
+          <button onclick="scratchpad.setColor('#38bdf8')" class="w-6 h-6 rounded-full bg-sky-400 border border-slate-400 hover:scale-110 transition" title="Blå penna"></button>
+          <button onclick="scratchpad.setColor('#f43f5e')" class="w-6 h-6 rounded-full bg-rose-500 border border-slate-400 hover:scale-110 transition" title="Röd penna"></button>
+          
+          <div class="h-5 w-px bg-slate-700 mx-1"></div>
+
+          <button onclick="scratchpad.setEraser()" id="btn-scratch-eraser" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-200" title="Suddgummi">
+            <i class="fa-solid fa-eraser"></i> Sudd
+          </button>
+          <button onclick="scratchpad.clear()" class="px-2.5 py-1 rounded-lg bg-rose-900/60 hover:bg-rose-800 text-xs font-semibold text-rose-200 border border-rose-700/50" title="Rensa allt">
+            <i class="fa-solid fa-trash"></i> Rensa
+          </button>
+          <button onclick="scratchpad.close()" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-slate-600 text-slate-200 flex items-center justify-center ml-2" title="Stäng kladdblock">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Kanvasen för ritande -->
+      <div class="flex-grow bg-slate-950 relative overflow-hidden cursor-crosshair">
+        <canvas id="scratch-canvas" class="w-full h-full touch-none block"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anpassad Toast Notification för feedback utan alerts -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    /* Ljudmotor byggd med Web Audio API - Inga externa ljudfiler krävs */
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        const saved = localStorage.getItem('mm_sound_enabled');
+        if (saved !== null) {
+          this.enabled = saved === 'true';
+        }
+        this.updateIcon();
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleSound() {
+        this.enabled = !this.enabled;
+        localStorage.setItem('mm_sound_enabled', this.enabled);
+        this.updateIcon();
+        if (this.enabled) {
+          this.playBeep(523.25, 0.1, 'sine'); // C5 bekräftelse
+        }
+      }
+
+      updateIcon() {
+        const icon = document.getElementById('sound-icon');
+        if (!icon) return;
+        if (this.enabled) {
+          icon.className = 'fa-solid fa-volume-high text-emerald-400';
+        } else {
+          icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+        }
+      }
+
+      playBeep(freq, duration = 0.15, type = 'sine', gainVal = 0.15) {
+        if (!this.enabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      /* Rätt svar: Glad dur-arpeggio */
+      playCorrect() {
+        if (!this.enabled) return;
+        this.initContext();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((f, i) => {
+          setTimeout(() => this.playBeep(f, 0.14, 'triangle', 0.2), i * 75);
+        });
+      }
+
+      /* Fel svar: Dämpad ton */
+      playWrong() {
+        if (!this.enabled) return;
+        this.initContext();
+        this.playBeep(260, 0.22, 'sawtooth', 0.15);
+        setTimeout(() => this.playBeep(220, 0.3, 'sawtooth', 0.15), 180);
+      }
+
+      /* Mynt-pling */
+      playCoin() {
+        if (!this.enabled) return;
+        this.initContext();
+        this.playBeep(987.77, 0.08, 'sine', 0.2); // B5
+        setTimeout(() => this.playBeep(1318.51, 0.22, 'sine', 0.25), 80); // E6
+      }
+
+      /* Seger-fanfar vid avklarad nivå */
+      playFanfare() {
+        if (!this.enabled) return;
+        this.initContext();
+        const notes = [
+          { f: 523.25, d: 0.12, t: 0 },
+          { f: 659.25, d: 0.12, t: 120 },
+          { f: 783.99, d: 0.12, t: 240 },
+          { f: 1046.50, d: 0.4, t: 380 }
+        ];
+        notes.forEach(n => {
+          setTimeout(() => this.playBeep(n.f, n.d, 'triangle', 0.25), n.t);
+        });
+      }
+
+      /* Användning av kraft/livlina */
+      playPowerup() {
+        if (!this.enabled) return;
+        this.initContext();
+        for (let i = 0; i < 6; i++) {
+          setTimeout(() => this.playBeep(400 + i * 120, 0.08, 'sine', 0.15), i * 40);
+        }
+      }
+    }
+
+    const audioEngine = new AudioEngine();
+
+    /* Kladdblock / Ritplatta för kladdräkning på skärmen */
+    class Scratchpad {
+      constructor() {
+        this.overlay = document.getElementById('scratchpad-overlay');
+        this.canvas = document.getElementById('scratch-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.isDrawing = false;
+        this.color = '#ffffff';
+        this.lineWidth = 3;
+        this.isEraser = false;
+        this.hasResized = false;
+
+        this.initEvents();
+      }
+
+      initEvents() {
+        const getPos = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          let clientX, clientY;
+          if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+          } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+          }
+          return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+          };
+        };
+
+        const start = (e) => {
+          this.isDrawing = true;
+          const pos = getPos(e);
+          this.ctx.beginPath();
+          this.ctx.moveTo(pos.x, pos.y);
+          if (e.type === 'touchstart') e.preventDefault();
+        };
+
+        const move = (e) => {
+          if (!this.isDrawing) return;
+          const pos = getPos(e);
+          this.ctx.lineTo(pos.x, pos.y);
+          this.ctx.stroke();
+          if (e.type === 'touchmove') e.preventDefault();
+        };
+
+        const stop = () => {
+          this.isDrawing = false;
+        };
+
+        this.canvas.addEventListener('mousedown', start);
+        this.canvas.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', stop);
+
+        this.canvas.addEventListener('touchstart', start, { passive: false });
+        this.canvas.addEventListener('touchmove', move, { passive: false });
+        window.addEventListener('touchend', stop);
+      }
+
+      toggle() {
+        if (this.overlay.classList.contains('hidden')) {
+          this.open();
+        } else {
+          this.close();
+        }
+      }
+
+      open() {
+        this.overlay.classList.remove('hidden');
+        if (!this.hasResized) {
+          setTimeout(() => this.resizeCanvas(), 50);
+          this.hasResized = true;
+        }
+      }
+
+      close() {
+        this.overlay.classList.add('hidden');
+      }
+
+      resizeCanvas() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        this.applyStyle();
+      }
+
+      applyStyle() {
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        this.ctx.lineWidth = this.isEraser ? 18 : this.lineWidth;
+        this.ctx.strokeStyle = this.isEraser ? '#020617' : this.color;
+      }
+
+      setColor(color) {
+        this.isEraser = false;
+        this.color = color;
+        this.applyStyle();
+        document.getElementById('btn-scratch-eraser').classList.remove('bg-amber-600');
+      }
+
+      setEraser() {
+        this.isEraser = true;
+        this.applyStyle();
+        document.getElementById('btn-scratch-eraser').classList.add('bg-amber-600');
+      }
+
+      clear() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      }
+    }
+
+    const scratchpad = new Scratchpad();
+
+    /* Världs- och zonspecifikationer för 100 nivåer anpassade för 10-12 år */
+    const ZONES = [
+      {
+        id: 1,
+        title: "Räkneskogen",
+        icon: "fa-tree",
+        color: "from-emerald-600 to-teal-800",
+        border: "border-emerald-500",
+        levels: [1, 20],
+        desc: "Stora tal, huvudräkning (+, -), tiotalsmultiplikation och enkel division."
+      },
+      {
+        id: 2,
+        title: "Bråk- & Decimalgrottorna",
+        icon: "fa-gem",
+        color: "from-blue-600 to-indigo-800",
+        border: "border-blue-500",
+        levels: [21, 40],
+        desc: "Bråktal (del av helhet, enkla bråk) samt addition och subtraktion med decimaltal."
+      },
+      {
+        id: 3,
+        title: "Geometri- & Mätningsön",
+        icon: "fa-shapes",
+        color: "from-amber-600 to-orange-800",
+        border: "border-amber-500",
+        levels: [41, 60],
+        desc: "Omkrets, area samt enhetsomvandling för längd (m/cm/mm), vikt (kg/g) och volym (l/dl)."
+      },
+      {
+        id: 4,
+        title: "Procent- & Ekvationsborgen",
+        icon: "fa-chess-rook",
+        color: "from-purple-600 to-pink-800",
+        border: "border-purple-500",
+        levels: [61, 80],
+        desc: "Procenträkning (10%, 25%, 50%), rea/rabatt, ekvationer och räkneordning (PEMDAS)."
+      },
+      {
+        id: 5,
+        title: "Den Kosmiska Mattedimensionen",
+        icon: "fa-rocket",
+        color: "from-fuchsia-600 to-violet-900",
+        border: "border-fuchsia-500",
+        levels: [81, 100],
+        desc: "Negativa tal, potenser, medelvärde & median, vinkelsummor och mästarkluringar."
+      }
+    ];
+
+    /* Butikskatalog över Livlinor */
+    const SHOP_ITEMS = [
+      {
+        id: 'fiftyFifty',
+        name: '50/50 Trollspö',
+        icon: 'fa-wand-magic-sparkles',
+        color: 'text-amber-400',
+        price: 30,
+        desc: 'Tar bort två felaktiga svarsalternativ så du bara har två kvar att välja mellan!'
+      },
+      {
+        id: 'freezeTime',
+        name: 'Klok Uggla / Tidsfrys',
+        icon: 'fa-snowflake',
+        color: 'text-cyan-400',
+        price: 25,
+        desc: 'Ger dig +30 extra sekunder betänketid så du hinner tänka i lugn och ro.'
+      },
+      {
+        id: 'hint',
+        name: 'Klurig Ledtråd',
+        icon: 'fa-lightbulb',
+        color: 'text-yellow-400',
+        price: 35,
+        desc: 'Visar en pedagogisk formel eller tips som guidar dig rakt mot lösningen.'
+      },
+      {
+        id: 'skip',
+        name: 'Superhoppet',
+        icon: 'fa-forward-step',
+        color: 'text-purple-400',
+        price: 50,
+        desc: 'Hoppar omedelbart över frågan, ger full poäng och visar lösningen!'
+      },
+      {
+        id: 'doubleCoins',
+        name: 'Guld-Booster (x2)',
+        icon: 'fa-circle-dollar-to-slot',
+        color: 'text-emerald-400',
+        price: 45,
+        desc: 'Fördubblar alla intjänade guldmynt under hela den aktiva nivån!'
+      }
+    ];
+
+    /* Generator som skapar realistiska, läroplansnära mattefrågor anpassade för nivå 1-100 */
+    class MathGenerator {
+      static generateQuestion(level) {
+        let q = {};
+        // Zon 1: Räkneskogen (1-20)
+        if (level <= 5) {
+          // Stora tal addition & subtraktion (upp till 1000)
+          const isAdd = Math.random() > 0.4;
+          const a = (Math.floor(Math.random() * 40) + 10) * 10;
+          const b = (Math.floor(Math.random() * 30) + 10) * 10;
+          if (isAdd) {
+            const ans = a + b;
+            q = {
+              cat: "Addition",
+              prompt: `Vad är ${a} + ${b}?`,
+              ans: ans,
+              distractors: [ans - 10, ans + 10, ans + 20, ans - 20],
+              exp: `${a} + ${b} = ${ans}. Tips: Addera tiotalen först!`,
+              hint: `Dela upp talen: räkna tiotal för sig och addera sedan ihop dem.`
+            };
+          } else {
+            const big = Math.max(a, b) + 100;
+            const small = Math.min(a, b);
+            const ans = big - small;
+            q = {
+              cat: "Subtraktion",
+              prompt: `Vad är ${big} - ${small}?`,
+              ans: ans,
+              distractors: [ans + 10, ans - 10, ans + 20, ans - 20],
+              exp: `${big} - ${small} = ${ans}.`,
+              hint: `Räkna bakåt i jämna tiotal från ${big}.`
+            };
+          }
+        } else if (level <= 10) {
+          // Multiplikation: Tabellerna och tiotalsmultiplikation
+          const factor1 = Math.floor(Math.random() * 6) + 6; // 6-11
+          const factor2 = (Math.floor(Math.random() * 8) + 2) * (level > 8 ? 10 : 1);
+          const ans = factor1 * factor2;
+          q = {
+            cat: "Multiplikation",
+            prompt: `Vad är ${factor1} × ${factor2}?`,
+            ans: ans,
+            distractors: [ans + factor1, ans - factor1, ans + 10, ans - 10],
+            exp: `${factor1} gånger ${factor2} är ${ans}.`,
+            hint: `Om du kan ${factor1} × ${factor2 > 10 ? factor2/10 : factor2}, lägg till en nolla på slutet!`
+          };
+        } else if (level <= 15) {
+          // Division (jämna kvoter)
+          const divisor = Math.floor(Math.random() * 7) + 3; // 3-9
+          const quotient = Math.floor(Math.random() * 12) + 4;
+          const dividend = divisor * quotient;
+          q = {
+            cat: "Division",
+            prompt: `Vad blir ${dividend} ÷ ${divisor}?`,
+            ans: quotient,
+            distractors: [quotient + 1, quotient - 1, quotient + 2, Math.max(1, quotient - 2)],
+            exp: `${dividend} delat med ${divisor} är ${quotient}, eftersom ${quotient} × ${divisor} = ${dividend}.`,
+            hint: `Tänk baklänges: Hur många gånger får ${divisor} plats i ${dividend}?`
+          };
+        } else if (level <= 20) {
+          // Vardagsmatematik / Blandade räknesätt
+          const antal = Math.floor(Math.random() * 4) + 3;
+          const pris = Math.floor(Math.random() * 6) + 12;
+          const totalt = antal * pris;
+          q = {
+            cat: "Vardagsproblem",
+            prompt: `Liam köper ${antal} stycken böcker för ${pris} kr styck. Vad kostar allt?`,
+            ans: `${totalt} kr`,
+            distractors: [`${totalt + pris} kr`, `${totalt - pris} kr`, `${totalt + 10} kr`],
+            exp: `${antal} böcker × ${pris} kr = ${totalt} kr totalt.`,
+            hint: `Multiplicera antalet böcker med styckpriset.`
+          };
+        }
+
+        // Zon 2: Bråk- & Decimalgrottorna (21-40)
+        else if (level <= 25) {
+          // Del av helhet (1/2, 1/3, 1/4, 1/5)
+          const denominators = [2, 3, 4, 5, 10];
+          const denom = denominators[Math.floor(Math.random() * denominators.length)];
+          const mult = Math.floor(Math.random() * 9) + 2;
+          const helhet = denom * mult;
+          const ans = helhet / denom;
+          q = {
+            cat: "Bråkdel av helhet",
+            prompt: `Hur mycket är 1/${denom} av ${helhet}?`,
+            ans: ans,
+            distractors: [ans + 1, Math.max(1, ans - 1), ans + 2, Math.max(1, ans - 2)],
+            exp: `1/${denom} av ${helhet} beräknas genom att dela ${helhet} med ${denom}, vilket blir ${ans}.`,
+            hint: `Dela hela talet (${helhet}) med nämnaren (${denom}).`
+          };
+        } else if (level <= 30) {
+          // Bråk & likvärdighet
+          const fractions = [
+            { f: "2/4", equiv: "1/2", wrong: ["1/4", "3/4", "2/3"] },
+            { f: "3/6", equiv: "1/2", wrong: ["1/3", "2/3", "1/6"] },
+            { f: "4/8", equiv: "1/2", wrong: ["1/4", "3/8", "2/4"] },
+            { f: "2/6", equiv: "1/3", wrong: ["1/2", "1/6", "3/4"] },
+            { f: "2/8", equiv: "1/4", wrong: ["1/2", "3/4", "1/8"] }
+          ];
+          const item = fractions[Math.floor(Math.random() * fractions.length)];
+          q = {
+            cat: "Likvärdiga Bråk",
+            prompt: `Vilket förenklat bråk har samma värde som ${item.f}?`,
+            ans: item.equiv,
+            distractors: item.wrong,
+            exp: `Bråket ${item.f} kan förkortas och är exakt lika mycket som ${item.equiv}.`,
+            hint: `Dela både täljaren och nämnaren med samma tal!`
+          };
+        } else if (level <= 35) {
+          // Decimaltal: addition och subtraktion
+          const d1 = (Math.floor(Math.random() * 30) + 10) / 10; // ex 2.4
+          const d2 = (Math.floor(Math.random() * 20) + 5) / 10;  // ex 1.5
+          const isAdd = Math.random() > 0.5;
+          if (isAdd) {
+            const ans = Number((d1 + d2).toFixed(1));
+            q = {
+              cat: "Decimaltal Addition",
+              prompt: `Vad är ${d1.toString().replace('.', ',')} + ${d2.toString().replace('.', ',')}?`,
+              ans: ans.toString().replace('.', ','),
+              distractors: [
+                (ans + 0.1).toFixed(1).replace('.', ','),
+                (ans - 0.1).toFixed(1).replace('.', ','),
+                (ans + 1).toFixed(1).replace('.', ',')
+              ],
+              exp: `${d1.toString().replace('.', ',')} + ${d2.toString().replace('.', ',')} = ${ans.toString().replace('.', ',')}.`,
+              hint: `Håll koll på decimaltecknet och addera tiondelar för sig!`
+            };
+          } else {
+            const bigger = Number((d1 + d2).toFixed(1));
+            const ans = d1;
+            q = {
+              cat: "Decimaltal Subtraktion",
+              prompt: `Vad är ${bigger.toString().replace('.', ',')} - ${d2.toString().replace('.', ',')}?`,
+              ans: ans.toString().replace('.', ','),
+              distractors: [
+                (ans + 0.1).toFixed(1).replace('.', ','),
+                (ans - 0.1).toFixed(1).replace('.', ','),
+                (ans + 0.2).toFixed(1).replace('.', ',')
+              ],
+              exp: `${bigger.toString().replace('.', ',')} - ${d2.toString().replace('.', ',')} = ${ans.toString().replace('.', ',')}.`,
+              hint: `Subtrahera tiondelarna först, sedan entalen.`
+            };
+          }
+        } else if (level <= 40) {
+          // Samband mellan bråk och decimaltal
+          const pairs = [
+            { b: "1/2", d: "0,5", wrong: ["0,2", "0,05", "0,25"] },
+            { b: "1/4", d: "0,25", wrong: ["0,4", "0,14", "0,5"] },
+            { b: "3/4", d: "0,75", wrong: ["0,34", "0,7", "0,43"] },
+            { b: "1/5", d: "0,2", wrong: ["0,5", "0,15", "0,02"] },
+            { b: "1/10", d: "0,1", wrong: ["0,01", "0,100", "0,5"] }
+          ];
+          const choice = pairs[Math.floor(Math.random() * pairs.length)];
+          q = {
+            cat: "Bråk till Decimaltal",
+            prompt: `Vad är bråket ${choice.b} skrivet i decimalform?`,
+            ans: choice.d,
+            distractors: choice.wrong,
+            exp: `En hel är 1,0. Därför är ${choice.b} lika med ${choice.d}.`,
+            hint: `Tänk på pengar: En halv krona är 50 öre (0,50 kr)!`
+          };
+        }
+
+        // Zon 3: Geometri- & Mätningsön (41-60)
+        else if (level <= 45) {
+          // Omkrets på rektanglar & trianglar
+          const bredd = Math.floor(Math.random() * 6) + 4;
+          const hojd = Math.floor(Math.random() * 5) + 3;
+          const omkrets = 2 * (bredd + hojd);
+          q = {
+            cat: "Geometri: Omkrets",
+            prompt: `En rektangel har sidorna ${bredd} cm och ${hojd} cm. Vad är rektangelns omkrets?`,
+            ans: `${omkrets} cm`,
+            distractors: [`${bredd * hojd} cm`, `${omkrets + 2} cm`, `${omkrets - 2} cm`],
+            exp: `Omkretsen är summan av alla 4 sidor: ${bredd} + ${bredd} + ${hojd} + ${hojd} = ${omkrets} cm.`,
+            hint: `Omkretsen är sträckan hela vägen runt figuren (två längder + två bredder).`
+          };
+        } else if (level <= 50) {
+          // Area på rektangel
+          const b = Math.floor(Math.random() * 8) + 3;
+          const h = Math.floor(Math.random() * 6) + 2;
+          const area = b * h;
+          q = {
+            cat: "Geometri: Area",
+            prompt: `Beräkna arean av en rektangel med basen ${b} cm och höjden ${h} cm.`,
+            ans: `${area} cm²`,
+            distractors: [`${2 * (b + h)} cm²`, `${area + 4} cm²`, `${area - 3} cm²`],
+            exp: `Area för en rektangel = basen × höjden. ${b} × ${h} = ${area} cm².`,
+            hint: `Formeln för rektangelns area är basen multiplicerat med höjden!`
+          };
+        } else if (level <= 55) {
+          // Enhetsomvandling längd (m, dm, cm, mm)
+          const meter = Math.floor(Math.random() * 5) + 2;
+          const cm = meter * 100;
+          q = {
+            cat: "Enhetsomvandling: Längd",
+            prompt: `Hur många centimeter (cm) är ${meter} meter?`,
+            ans: `${cm} cm`,
+            distractors: [`${meter * 10} cm`, `${meter * 1000} cm`, `${cm + 50} cm`],
+            exp: `Det går 100 cm på 1 meter. Så ${meter} m = ${cm} cm.`,
+            hint: `Kom ihåg: 1 meter = 10 decimeter = 100 centimeter.`
+          };
+        } else if (level <= 60) {
+          // Enhetsomvandling vikt & volym (kg/g, l/dl)
+          const kg = (Math.floor(Math.random() * 4) + 1.5);
+          const gram = kg * 1000;
+          q = {
+            cat: "Enhetsomvandling: Vikt",
+            prompt: `Hur många gram är ${kg.toString().replace('.', ',')} kg?`,
+            ans: `${gram} g`,
+            distractors: [`${kg * 100} g`, `${gram + 500} g`, `${gram - 200} g`],
+            exp: `1 kg är 1 000 gram. Alltså är ${kg.toString().replace('.', ',')} kg = ${gram} g.`,
+            hint: `"Kilo" betyder tusen, så multiplicera med 1 000!`
+          };
+        }
+
+        // Zon 4: Procent- & Ekvationsborgen (61-80)
+        else if (level <= 65) {
+          // Enkel procent (10%, 25%, 50%)
+          const pctOptions = [
+            { pct: 10, divider: 10, mult: 40 },
+            { pct: 50, divider: 2, mult: 60 },
+            { pct: 25, divider: 4, mult: 80 }
+          ];
+          const p = pctOptions[Math.floor(Math.random() * pctOptions.length)];
+          const base = (Math.floor(Math.random() * 5) + 2) * p.mult;
+          const ans = base / p.divider;
+          q = {
+            cat: "Procent",
+            prompt: `Vad är ${p.pct}% av ${base} kr?`,
+            ans: `${ans} kr`,
+            distractors: [`${ans * 2} kr`, `${ans + 10} kr`, `${ans - 5} kr`],
+            exp: `${p.pct}% motsvarar att dividera med ${p.divider}. ${base} / ${p.divider} = ${ans} kr.`,
+            hint: `${p.pct === 50 ? '50% är hälften!' : (p.pct === 25 ? '25% är en fjärdedel!' : '10% innebär att dela med 10.')}`
+          };
+        } else if (level <= 70) {
+          // Rea och prisrabatter
+          const ordinarie = 200;
+          const rabatt = 50; // 50% rabatt eller 25%
+          const nyttPris = ordinarie * (1 - rabatt / 100);
+          q = {
+            cat: "Rea & Rabatt",
+            prompt: `En tröja kostar ${ordinarie} kr ordinarie pris. Det är ${rabatt}% rea! Vad kostar den nu?`,
+            ans: `${nyttPris} kr`,
+            distractors: [`${ordinarie - rabatt} kr`, `${nyttPris + 20} kr`, `${nyttPris - 15} kr`],
+            exp: `${rabatt}% av ${ordinarie} kr är ${ordinarie - nyttPris} kr. Nya priset är ${nyttPris} kr.`,
+            hint: `Räkna ut vad rabatten är i kronor och dra sedan bort det från ordinarie pris.`
+          };
+        } else if (level <= 75) {
+          // Enkla ekvationer (x + a = b eller k*x = c)
+          const isAdd = Math.random() > 0.5;
+          if (isAdd) {
+            const x = Math.floor(Math.random() * 12) + 4;
+            const a = Math.floor(Math.random() * 15) + 5;
+            const sum = x + a;
+            q = {
+              cat: "Ekvationer",
+              prompt: `Lös ekvationen: x + ${a} = ${sum}. Vad är x?`,
+              ans: x,
+              distractors: [x + 2, Math.max(1, x - 2), x + 1, sum],
+              exp: `För att få x ensamt: subtrahera ${a} från båda sidor: ${sum} - ${a} = ${x}.`,
+              hint: `Vilket tal ska läggas till ${a} för att summan ska bli ${sum}?`
+            };
+          } else {
+            const x = Math.floor(Math.random() * 8) + 3;
+            const k = Math.floor(Math.random() * 4) + 2;
+            const prod = k * x;
+            q = {
+              cat: "Ekvationer",
+              prompt: `Lös ekvationen: ${k}x = ${prod}. Vad är x?`,
+              ans: x,
+              distractors: [x + 1, Math.max(1, x - 1), prod - k, x * 2],
+              exp: `Dela båda sidorna med ${k}: ${prod} ÷ ${k} = ${x}.`,
+              hint: `Dela produkten ${prod} med talet framför x (${k}).`
+            };
+          }
+        } else if (level <= 80) {
+          // Prioriteringsregler (Räkneordning)
+          const a = Math.floor(Math.random() * 5) + 3;
+          const b = Math.floor(Math.random() * 4) + 2;
+          const c = Math.floor(Math.random() * 6) + 2;
+          const ans = a + b * c;
+          const fel = (a + b) * c; // Vanligt misstag bland elever
+          q = {
+            cat: "Räkneordning",
+            prompt: `Beräkna: ${a} + ${b} × ${c}`,
+            ans: ans,
+            distractors: [fel, ans + 2, ans - 2],
+            exp: `Multiplikation görs ALLTID före addition! Först ${b} × ${c} = ${b * c}, sedan + ${a} = ${ans}.`,
+            hint: `Kom ihåg räkneordningen: Multiplicera först, addera sedan!`
+          };
+        }
+
+        // Zon 5: Den Kosmiska Mattedimensionen (81-100)
+        else if (level <= 85) {
+          // Negativa tal
+          const start = Math.floor(Math.random() * 7) + 2; // ex 4
+          const sub = start + Math.floor(Math.random() * 6) + 3; // ex 9
+          const ans = start - sub;
+          q = {
+            cat: "Negativa Tal",
+            prompt: `Termometern visar ${start} °C på morgonen. Temperaturen sjunker med ${sub} °C. Vad blir temperaturen?`,
+            ans: `${ans} °C`,
+            distractors: [`${ans - 2} °C`, `${ans + 2} °C`, `${Math.abs(ans)} °C`],
+            exp: `${start} - ${sub} = ${ans} °C.`,
+            hint: `När du passerar nollan fortsätter du räkna på minussidan.`
+          };
+        } else if (level <= 90) {
+          // Potenser & Kvadratrötter
+          const bas = Math.floor(Math.random() * 6) + 3; // 3-8
+          const ans = bas * bas;
+          q = {
+            cat: "Potenser",
+            prompt: `Vad är potensen ${bas}² lika med?`,
+            ans: ans,
+            distractors: [bas * 2, ans + bas, ans - 2],
+            exp: `${bas}² betyder ${bas} multiplicerat med sig självt (${bas} × ${bas} = ${ans}).`,
+            hint: `Ett tal upphöjt till 2 betyder att du tar talet gånger sig självt!`
+          };
+        } else if (level <= 95) {
+          // Statistik: Medelvärde
+          const n1 = Math.floor(Math.random() * 4) + 2;
+          const n2 = Math.floor(Math.random() * 4) + 4;
+          const n3 = Math.floor(Math.random() * 4) + 6;
+          const sum = n1 + n2 + n3;
+          // Justera summan så den är delbar med 3
+          const rest = sum % 3;
+          const adjN3 = rest === 0 ? n3 : n3 + (3 - rest);
+          const finalSum = n1 + n2 + adjN3;
+          const medel = finalSum / 3;
+          q = {
+            cat: "Medelvärde",
+            prompt: `Beräkna medelvärdet av talen: ${n1}, ${n2} och ${adjN3}.`,
+            ans: medel,
+            distractors: [medel + 1, Math.max(1, medel - 1), medel + 2],
+            exp: `Addera alla tre talen (${n1} + ${n2} + ${adjN3} = ${finalSum}) och dela med 3. ${finalSum} ÷ 3 = ${medel}.`,
+            hint: `Lägg ihop alla talen och dividera med hur många tal det finns.`
+          };
+        } else {
+          // Vinkelsumma & Mästarkluringar (Nivå 96-100)
+          const v1 = 50;
+          const v2 = 70;
+          const v3 = 180 - (v1 + v2);
+          q = {
+            cat: "Vinkelsumma i Triangel",
+            prompt: `I en triangel är två av vinklarna ${v1}° och ${v2}°. Hur stor är den tredje vinkeln?`,
+            ans: `${v3}°`,
+            distractors: [`${v3 + 10}°`, `${v3 - 10}°`, `90°`],
+            exp: `En triangels vinkelsumma är alltid 180°. 180° - ${v1}° - ${v2}° = ${v3}°.`,
+            hint: `Alla vinklar i en triangel blir alltid tillsammans 180 grader!`
+          };
+        }
+
+        // Blanda alternativen ordentligt
+        const uniqueDistractors = [...new Set(q.distractors)].filter(d => String(d) !== String(q.ans)).slice(0, 3);
+        while (uniqueDistractors.length < 3) {
+          uniqueDistractors.push(typeof q.ans === 'number' ? q.ans + uniqueDistractors.length + 5 : `${q.ans}*`);
+        }
+        
+        const allOptions = [String(q.ans), ...uniqueDistractors.map(d => String(d))];
+        // Shuffle
+        for (let i = allOptions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+        }
+
+        return {
+          category: q.cat,
+          prompt: q.prompt,
+          correctAnswer: String(q.ans),
+          options: allOptions,
+          explanation: q.exp,
+          hint: q.hint
+        };
+      }
+    }
+
+    /* Huvudspelslogik & tillståndshanterare */
+    class MathGame {
+      constructor() {
+        this.currentLevel = 1;
+        this.currentZone = 1;
+        this.questionIndex = 0;
+        this.correctCount = 0;
+        this.streak = 0;
+        this.activeQuestion = null;
+        this.timer = null;
+        this.timeLeft = 45;
+        this.isAnswering = false;
+        this.doubleCoinsActive = false;
+
+        // Laddar sparad spelardata
+        this.loadProgress();
+
+        // Initiera UI och rita nivåer
+        this.initUI();
+      }
+
+      loadProgress() {
+        const savedCoins = localStorage.getItem('mm_coins');
+        this.coins = savedCoins !== null ? parseInt(savedCoins, 10) : 50; // 50 startmynt!
+
+        const savedUnlocked = localStorage.getItem('mm_unlocked');
+        this.unlockedLevel = savedUnlocked !== null ? parseInt(savedUnlocked, 10) : 1;
+
+        const savedStars = localStorage.getItem('mm_stars');
+        this.stars = savedStars ? JSON.parse(savedStars) : {};
+
+        const savedInventory = localStorage.getItem('mm_inventory');
+        this.inventory = savedInventory ? JSON.parse(savedInventory) : {
+          fiftyFifty: 2,
+          freezeTime: 2,
+          hint: 2,
+          skip: 1,
+          doubleCoins: 1
+        };
+      }
+
+      saveProgress() {
+        localStorage.setItem('mm_coins', this.coins);
+        localStorage.setItem('mm_unlocked', this.unlockedLevel);
+        localStorage.setItem('mm_stars', JSON.stringify(this.stars));
+        localStorage.setItem('mm_inventory', JSON.stringify(this.inventory));
+        this.updateHUD();
+      }
+
+      updateHUD() {
+        const hudCoins = document.getElementById('hud-coins');
+        if (hudCoins) hudCoins.textContent = this.coins;
+
+        const shopCoins = document.getElementById('shop-coins-balance');
+        if (shopCoins) shopCoins.textContent = this.coins;
+
+        // Uppdatera lagerikoner i spelvyn
+        document.getElementById('badge-count-5050').textContent = this.inventory.fiftyFifty || 0;
+        document.getElementById('badge-count-time').textContent = this.inventory.freezeTime || 0;
+        document.getElementById('badge-count-hint').textContent = this.inventory.hint || 0;
+        document.getElementById('badge-count-skip').textContent = this.inventory.skip || 0;
+      }
+
+      initUI() {
+        this.updateHUD();
+        this.renderZoneTabs();
+        this.renderLevelsGrid(1);
+        this.renderShop();
+        this.updateMapStats();
+      }
+
+      updateMapStats() {
+        let totalStars = 0;
+        Object.values(this.stars).forEach(s => totalStars += s);
+        document.getElementById('map-total-stars').textContent = totalStars;
+
+        const percent = Math.min(100, Math.round((this.unlockedLevel / 100) * 100));
+        document.getElementById('map-progress-percent').textContent = `${percent}%`;
+      }
+
+      renderZoneTabs() {
+        const container = document.getElementById('zone-tabs');
+        container.innerHTML = '';
+
+        ZONES.forEach(zone => {
+          const btn = document.createElement('button');
+          const isSelected = zone.id === this.currentZone;
+          btn.className = `px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition whitespace-nowrap ${
+            isSelected 
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' 
+              : 'bg-slate-800/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+          }`;
+          btn.innerHTML = `<i class="fa-solid ${zone.icon}"></i> ${zone.title}`;
+          btn.onclick = () => {
+            this.currentZone = zone.id;
+            this.renderZoneTabs();
+            this.renderLevelsGrid(zone.id);
+          };
+          container.appendChild(btn);
+        });
+      }
+
+      renderLevelsGrid(zoneId) {
+        const zone = ZONES.find(z => z.id === zoneId);
+        document.getElementById('current-zone-title').innerHTML = `<i class="fa-solid ${zone.icon} text-amber-400"></i> Zon ${zone.id}: ${zone.title}`;
+        document.getElementById('current-zone-desc').textContent = zone.desc;
+        document.getElementById('current-zone-range').textContent = `${zone.levels[0]}–${zone.levels[1]}`;
+
+        const grid = document.getElementById('levels-grid');
+        grid.innerHTML = '';
+
+        for (let lvl = zone.levels[0]; lvl <= zone.levels[1]; lvl++) {
+          const isUnlocked = lvl <= this.unlockedLevel;
+          const starsForLevel = this.stars[lvl] || 0;
+          const isCurrent = lvl === this.unlockedLevel;
+
+          const card = document.createElement('button');
+          card.className = `relative p-2 sm:p-2.5 rounded-2xl flex flex-col items-center justify-between border transition duration-150 ${
+            isUnlocked
+              ? (isCurrent 
+                  ? 'bg-indigo-950/90 border-indigo-400 shadow-lg shadow-indigo-500/20 active:scale-95' 
+                  : 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 active:scale-95')
+              : 'bg-slate-900/50 border-slate-800/60 opacity-40 cursor-not-allowed'
+          }`;
+          card.disabled = !isUnlocked;
+
+          // Stjärnikoner överst
+          let starHtml = '';
+          for (let s = 1; s <= 3; s++) {
+            starHtml += `<i class="fa-solid fa-star text-[9px] ${s <= starsForLevel ? 'text-amber-400' : 'text-slate-600'}"></i>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center gap-0.5 mb-1">
+              ${isUnlocked ? starHtml : '<i class="fa-solid fa-lock text-[10px] text-slate-500"></i>'}
+            </div>
+            <div class="font-heading text-base sm:text-lg font-bold ${isCurrent ? 'text-indigo-300' : 'text-white'}">
+              ${lvl}
+            </div>
+            <div class="text-[9px] uppercase tracking-wider font-semibold text-slate-400 mt-0.5">
+              ${isUnlocked ? (starsForLevel > 0 ? 'Klar' : 'Öppen') : 'Låst'}
+            </div>
+          `;
+
+          if (isUnlocked) {
+            card.onclick = () => this.startLevel(lvl);
+          }
+
+          grid.appendChild(card);
+        }
+      }
+
+      showScreen(screenName) {
+        document.getElementById('screen-map').classList.add('hidden');
+        document.getElementById('screen-game').classList.add('hidden');
+        document.getElementById('screen-result').classList.add('hidden');
+        document.getElementById('screen-shop').classList.add('hidden');
+
+        if (screenName === 'map') {
+          document.getElementById('screen-map').classList.remove('hidden');
+          this.renderZoneTabs();
+          this.renderLevelsGrid(this.currentZone);
+          this.updateMapStats();
+        } else if (screenName === 'game') {
+          document.getElementById('screen-game').classList.remove('hidden');
+        } else if (screenName === 'result') {
+          document.getElementById('screen-result').classList.remove('hidden');
+        } else if (screenName === 'shop') {
+          document.getElementById('screen-shop').classList.remove('hidden');
+          this.renderShop();
+        }
+      }
+
+      startLevel(levelNumber) {
+        this.currentLevel = levelNumber;
+        this.questionIndex = 0;
+        this.correctCount = 0;
+        this.streak = 0;
+        this.doubleCoinsActive = false;
+
+        // Fastställ tillhörande zon
+        const foundZone = ZONES.find(z => levelNumber >= z.levels[0] && levelNumber <= z.levels[1]);
+        if (foundZone) {
+          this.currentZone = foundZone.id;
+          document.getElementById('game-zone-badge').textContent = `Zon ${foundZone.id}: ${foundZone.title}`;
+        }
+
+        document.getElementById('game-level-number').textContent = `Nivå ${this.currentLevel}`;
+        this.showScreen('game');
+        this.loadNextQuestion();
+      }
+
+      loadNextQuestion() {
+        this.isAnswering = false;
+        this.questionIndex++;
+
+        // Dölj feedbackpanel och ledtråd
+        document.getElementById('feedback-panel').classList.add('hidden');
+        document.getElementById('hint-display-box').classList.add('hidden');
+
+        // Uppdatera statusrad
+        document.getElementById('game-question-index').textContent = this.questionIndex;
+        document.getElementById('game-correct-count').textContent = this.correctCount;
+        document.getElementById('game-streak-count').textContent = this.streak;
+        
+        const progressPct = ((this.questionIndex - 1) / 10) * 100;
+        document.getElementById('game-progress-bar').style.width = `${progressPct}%`;
+
+        // Generera ny dynamisk fråga för nivån
+        this.activeQuestion = MathGenerator.generateQuestion(this.currentLevel);
+
+        // Rendera Fråga och Svarsalternativ
+        document.getElementById('question-category-tag').textContent = this.activeQuestion.category;
+        document.getElementById('question-prompt').textContent = this.activeQuestion.prompt;
+        document.getElementById('hint-text').textContent = this.activeQuestion.hint;
+
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+
+        this.activeQuestion.options.forEach((optText, index) => {
+          const btn = document.createElement('button');
+          btn.className = `option-button btn-3d bg-slate-800 hover:bg-slate-700/90 text-white font-heading text-lg sm:text-xl font-bold p-4 sm:p-5 rounded-2xl border-2 border-slate-700 flex items-center justify-between text-left transition`;
+          btn.innerHTML = `
+            <span>${optText}</span>
+            <span class="w-7 h-7 rounded-full bg-slate-700 text-slate-300 text-xs flex items-center justify-center font-bold">
+              ${['A', 'B', 'C', 'D'][index]}
+            </span>
+          `;
+          btn.onclick = () => this.handleAnswer(optText, btn);
+          optionsContainer.appendChild(btn);
+        });
+
+        // Starta tidsräknaren
+        this.startTimer(45);
+      }
+
+      startTimer(seconds) {
+        clearInterval(this.timer);
+        this.timeLeft = seconds;
+        this.updateTimerDisplay();
+
+        this.timer = setInterval(() => {
+          this.timeLeft--;
+          this.updateTimerDisplay();
+          if (this.timeLeft <= 0) {
+            clearInterval(this.timer);
+            this.handleTimeOut();
+          }
+        }, 1000);
+      }
+
+      updateTimerDisplay() {
+        const display = document.getElementById('game-timer-display');
+        display.textContent = `${this.timeLeft}s`;
+        if (this.timeLeft <= 10) {
+          display.className = 'font-mono font-bold text-rose-400 animate-pulse';
+        } else {
+          display.className = 'font-mono font-bold text-slate-300';
+        }
+      }
+
+      handleTimeOut() {
+        if (this.isAnswering) return;
+        audioEngine.playWrong();
+        this.showToast("Tiden rann ut! ⏳", "info");
+        this.finalizeQuestion(false, "Tiden tog slut innan du hann svara.");
+      }
+
+      handleAnswer(selectedOption, clickedButton) {
+        if (this.isAnswering) return;
+        this.isAnswering = true;
+        clearInterval(this.timer);
+
+        const isCorrect = String(selectedOption).trim() === String(this.activeQuestion.correctAnswer).trim();
+
+        // Markera visuellt på knapparna
+        const buttons = document.querySelectorAll('.option-button');
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          const text = btn.querySelector('span').textContent.trim();
+          if (text === String(this.activeQuestion.correctAnswer).trim()) {
+            btn.className = `btn-3d bg-emerald-600 border-2 border-emerald-400 text-white font-heading text-lg sm:text-xl font-bold p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left`;
+          } else if (btn === clickedButton && !isCorrect) {
+            btn.className = `btn-3d bg-rose-600 border-2 border-rose-400 text-white font-heading text-lg sm:text-xl font-bold p-4 sm:p-5 rounded-2xl flex items-center justify-between text-left`;
+          }
+        });
+
+        if (isCorrect) {
+          audioEngine.playCorrect();
+          this.correctCount++;
+          this.streak++;
+          // Lägg till guldmynt
+          let earned = 5;
+          if (this.doubleCoinsActive) earned *= 2;
+          this.coins += earned;
+          audioEngine.playCoin();
+          this.saveProgress();
+          this.finalizeQuestion(true, this.activeQuestion.explanation);
+        } else {
+          audioEngine.playWrong();
+          this.streak = 0;
+          this.finalizeQuestion(false, this.activeQuestion.explanation);
+        }
+      }
+
+      finalizeQuestion(isCorrect, explanationText) {
+        const panel = document.getElementById('feedback-panel');
+        const title = document.getElementById('feedback-title');
+        const explanation = document.getElementById('feedback-explanation');
+        const icon = document.getElementById('feedback-icon');
+
+        panel.classList.remove('hidden');
+
+        if (isCorrect) {
+          panel.className = 'p-4 sm:p-5 rounded-2xl border bg-emerald-950/60 border-emerald-500/50 text-emerald-100 animate-fadeIn';
+          title.textContent = this.streak > 2 ? `Strålande! 🔥 ${this.streak} i rad!` : 'Helt rätt! Bra tänkt!';
+          title.className = 'font-heading text-lg font-bold text-emerald-300';
+          icon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+        } else {
+          panel.className = 'p-4 sm:p-5 rounded-2xl border bg-rose-950/60 border-rose-500/50 text-rose-100 animate-fadeIn';
+          title.textContent = 'Inte riktigt rätt den här gången!';
+          title.className = 'font-heading text-lg font-bold text-rose-300';
+          icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-400"></i>';
+        }
+
+        explanation.textContent = explanationText;
+      }
+
+      nextQuestion() {
+        if (this.questionIndex >= 10) {
+          this.finishLevel();
+        } else {
+          this.loadNextQuestion();
+        }
+      }
+
+      useLifeline(type) {
+        if (this.isAnswering) return;
+
+        if (!this.inventory[type] || this.inventory[type] <= 0) {
+          this.showToast(`Du har inga fler kvar! Köp i butiken.`, 'warning');
+          return;
+        }
+
+        if (type === 'fiftyFifty') {
+          // Tar bort två felaktiga alternativ
+          const buttons = Array.from(document.querySelectorAll('.option-button'));
+          const wrongButtons = buttons.filter(btn => {
+            const text = btn.querySelector('span').textContent.trim();
+            return text !== String(this.activeQuestion.correctAnswer).trim();
+          });
+
+          if (wrongButtons.length >= 2) {
+            // Slumpa 2 som ska döljas
+            const toHide = wrongButtons.sort(() => 0.5 - Math.random()).slice(0, 2);
+            toHide.forEach(btn => {
+              btn.style.opacity = '0.2';
+              btn.style.pointerEvents = 'none';
+            });
+            this.inventory.fiftyFifty--;
+            this.saveProgress();
+            audioEngine.playPowerup();
+            this.showToast('50/50 aktiverat! Två felaktiga svar borttagna.', 'success');
+          }
+        } 
+        else if (type === 'freezeTime') {
+          this.timeLeft += 30;
+          this.updateTimerDisplay();
+          this.inventory.freezeTime--;
+          this.saveProgress();
+          audioEngine.playPowerup();
+          this.showToast('+30 sekunder tillagd betänketid!', 'success');
+        } 
+        else if (type === 'hint') {
+          document.getElementById('hint-display-box').classList.remove('hidden');
+          this.inventory.hint--;
+          this.saveProgress();
+          audioEngine.playPowerup();
+          this.showToast('Ledtråd avslöjad!', 'info');
+        } 
+        else if (type === 'skip') {
+          this.inventory.skip--;
+          this.saveProgress();
+          audioEngine.playPowerup();
+          this.showToast('Superhopp! Frågan avklarad med full poäng.', 'success');
+          this.handleAnswer(this.activeQuestion.correctAnswer, null);
+        }
+      }
+
+      finishLevel() {
+        clearInterval(this.timer);
+        this.showScreen('result');
+
+        const score = this.correctCount;
+        let stars = 0;
+        let isPassed = false;
+
+        if (score === 10) {
+          stars = 3;
+          isPassed = true;
+        } else if (score >= 8) {
+          stars = 2;
+          isPassed = true;
+        } else if (score >= 6) {
+          stars = 1;
+          isPassed = true;
+        } else {
+          stars = 0;
+          isPassed = false;
+        }
+
+        // Beräkna myntbelöning
+        let levelCoins = 0;
+        if (isPassed) {
+          levelCoins += 30; // Grundbelöning för avklarad nivå
+          if (stars === 3) levelCoins += 50; // Perfekt streak bonus!
+          else if (stars === 2) levelCoins += 20;
+          
+          if (this.doubleCoinsActive) levelCoins *= 2;
+          this.coins += levelCoins;
+
+          // Uppdatera stjärnrekord
+          const currentBest = this.stars[this.currentLevel] || 0;
+          if (stars > currentBest) {
+            this.stars[this.currentLevel] = stars;
+          }
+
+          // Lås upp nästa nivå om det var den senaste öppna
+          if (this.currentLevel === this.unlockedLevel && this.unlockedLevel < 100) {
+            this.unlockedLevel++;
+          }
+
+          audioEngine.playFanfare();
+          this.triggerConfetti();
+        } else {
+          audioEngine.playWrong();
+        }
+
+        this.saveProgress();
+
+        // Uppdatera Resultatdialogen
+        document.getElementById('result-score').textContent = `${score} / 10`;
+        document.getElementById('result-coins-earned').innerHTML = `<i class="fa-solid fa-coins"></i> +${levelCoins}`;
+
+        const starElems = [
+          document.querySelector('#result-stars .star-1'),
+          document.querySelector('#result-stars .star-2'),
+          document.querySelector('#result-stars .star-3')
+        ];
+
+        starElems.forEach((elem, index) => {
+          elem.className = `fa-solid fa-star star-${index+1} text-3xl sm:text-4xl transition-all duration-300 ${
+            index < stars ? 'text-amber-400 scale-110 drop-shadow-[0_0_10px_rgba(251,191,36,0.6)]' : 'text-slate-700'
+          }`;
+        });
+
+        const title = document.getElementById('result-title');
+        const subtitle = document.getElementById('result-subtitle');
+        const actionBtn = document.getElementById('btn-result-action');
+
+        if (isPassed) {
+          title.textContent = stars === 3 ? "PERFEKT! 🌟" : "Nivå Avklarad! 🎉";
+          subtitle.textContent = `Du fick ${score} av 10 rätt och vann ${levelCoins} guldmynt!`;
+          actionBtn.innerHTML = `Nästa Nivå <i class="fa-solid fa-arrow-right ml-1"></i>`;
+          actionBtn.className = "w-full btn-3d btn-emerald text-slate-950 font-extrabold py-3 rounded-2xl text-sm";
+        } else {
+          title.textContent = "Nära ögat! Försök igen 💪";
+          subtitle.textContent = `Du behöver minst 6 rätt för att klara nivån. Du fick ${score}/10 rätt.`;
+          actionBtn.innerHTML = `Försök Igen <i class="fa-solid fa-rotate-right ml-1"></i>`;
+          actionBtn.className = "w-full btn-3d btn-amber text-slate-950 font-extrabold py-3 rounded-2xl text-sm";
+        }
+      }
+
+      nextLevelOrRetry() {
+        if (this.correctCount >= 6) {
+          if (this.currentLevel < 100) {
+            this.startLevel(this.currentLevel + 1);
+          } else {
+            this.showToast("Grattis! Du har klarat alla 100 nivåer!", "success");
+            this.showScreen('map');
+          }
+        } else {
+          this.startLevel(this.currentLevel);
+        }
+      }
+
+      confirmExitLevel() {
+        clearInterval(this.timer);
+        this.showScreen('map');
+      }
+
+      renderShop() {
+        const grid = document.getElementById('shop-items-grid');
+        grid.innerHTML = '';
+
+        SHOP_ITEMS.forEach(item => {
+          const card = document.createElement('div');
+          card.className = "bg-slate-900 border border-slate-800 rounded-3xl p-5 flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-slate-700 transition";
+
+          card.innerHTML = `
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-12 h-12 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-2xl ${item.color}">
+                  <i class="fa-solid ${item.icon}"></i>
+                </div>
+                <div class="bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 text-amber-300 font-heading font-bold text-sm">
+                  <i class="fa-solid fa-coins text-xs"></i> ${item.price}
+                </div>
+              </div>
+              <h3 class="font-heading text-lg font-bold text-white">${item.name}</h3>
+              <p class="text-xs text-slate-400 mt-1 leading-relaxed">${item.desc}</p>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+              <span class="text-xs text-slate-400">
+                I lager: <strong class="text-white">${this.inventory[item.id] || 0} st</strong>
+              </span>
+              <button onclick="game.buyItem('${item.id}', ${item.price})" class="btn-3d btn-amber text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5">
+                <i class="fa-solid fa-cart-plus"></i> Köp
+              </button>
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      }
+
+      buyItem(itemId, price) {
+        if (this.coins < price) {
+          audioEngine.playWrong();
+          this.showToast("Du har inte tillräckligt med mynt! Klara fler nivåer för att tjäna guld.", "warning");
+          return;
+        }
+
+        this.coins -= price;
+        this.inventory[itemId] = (this.inventory[itemId] || 0) + 1;
+        this.saveProgress();
+        audioEngine.playCoin();
+        this.renderShop();
+        this.showToast(`Köpt! Du har nu ${this.inventory[itemId]} st.`, "success");
+      }
+
+      showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+
+        const colors = {
+          success: 'bg-emerald-600 border-emerald-400 text-white',
+          warning: 'bg-amber-600 border-amber-400 text-white',
+          info: 'bg-indigo-600 border-indigo-400 text-white'
+        };
+
+        toast.className = `px-4 py-2.5 rounded-2xl shadow-2xl border text-xs sm:text-sm font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-4 opacity-0 ${colors[type] || colors.info}`;
+        toast.innerHTML = `
+          <i class="fa-solid ${type === 'success' ? 'fa-check' : (type === 'warning' ? 'fa-triangle-exclamation' : 'fa-bell')}"></i>
+          <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // Slide in
+        setTimeout(() => {
+          toast.classList.remove('translate-y-4', 'opacity-0');
+        }, 10);
+
+        // Slide out
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 3200);
+      }
+
+      triggerConfetti() {
+        const canvas = document.getElementById('victory-confetti');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+
+        const particles = [];
+        const colors = ['#f59e0b', '#10b981', '#6366f1', '#ec4899', '#38bdf8', '#facc15'];
+
+        for (let i = 0; i < 60; i++) {
+          particles.push({
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: (Math.random() - 0.5) * 12,
+            vy: (Math.random() - 0.7) * 14,
+            size: Math.random() * 6 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 10,
+            life: 1
+          });
+        }
+
+        let animId;
+        const animate = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          let alive = false;
+
+          particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.35; // Gravitation
+            p.rotation += p.rotationSpeed;
+            p.life -= 0.015;
+
+            if (p.life > 0) {
+              alive = true;
+              ctx.save();
+              ctx.globalAlpha = p.life;
+              ctx.translate(p.x, p.y);
+              ctx.rotate((p.rotation * Math.PI) / 180);
+              ctx.fillStyle = p.color;
+              ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+              ctx.restore();
+            }
+          });
+
+          if (alive) {
+            animId = requestAnimationFrame(animate);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            cancelAnimationFrame(animId);
+          }
+        };
+
+        animate();
+      }
+    }
+
+    /* Starta spelet när sidan laddats */
+    let game;
+    window.addEventListener('DOMContentLoaded', () => {
+      game = new MathGame();
+    });
+  </script>
+</body>
+</html>
